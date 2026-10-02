@@ -53,12 +53,48 @@ What a teammate does after cloning depends on how they run Claude Code:
   "trust this folder" dialog; in a checkout that was already trusted it is the next start
   after the settings file arrives. There is no install prompt.
 - **Non-interactive** (`claude -p`, scheduled or in-cluster agents): the settings file alone
-  installs nothing, because there is no trust dialog to accept. Run these once, with the same
-  tag the repo pins:
+  is not enough. A non-interactive run loads only plugins that were installed with
+  `claude plugin install`, even in a folder where an interactive session already has the
+  plugin working. Run these once, with the same tag the repo pins:
   ```bash
   claude plugin marketplace add 'language-operator/skills#v0.1.0'
   claude plugin install langop@language-operator --scope project
   ```
+
+### Checking the install
+
+`claude plugin list` shows only plugins that were installed explicitly with
+`claude plugin install`. It does not show a plugin that an interactive session loaded from
+the settings file, because that leaves no install record. So which check to use depends on the
+path:
+
+- **Interactive:** run `/plugin` and look at the **Installed** tab, or type `/iter` and see
+  `/langop:iterate` offered. `claude plugin list` saying `No plugins installed` here is
+  expected and does not mean the skill is missing.
+- **Non-interactive:** run `claude plugin list` from the repo. It is the right check for this
+  path, because it lists exactly what a non-interactive run will load. A working install
+  looks like this:
+  ```console
+  $ claude plugin list
+  Installed plugins:
+
+    ❯ langop@language-operator
+      Version: 0.1.0
+      Scope: project
+      Status: ✔ enabled
+  ```
+  `No plugins installed` means `claude -p` will not have the skill, so run the two commands
+  above. For a script or an agent's startup, this exits 0 only when the plugin is installed
+  and enabled:
+  ```bash
+  claude plugin list --json | jq -e '.[] | select(.id == "langop@language-operator" and .enabled)' > /dev/null
+  ```
+
+Run either form from inside the repo. The install is project-scoped, so from any other
+directory the plugin shows as `✘ disabled`.
+
+`claude plugin details langop@language-operator` is not an install check: it answers from the
+marketplace catalog, so it prints the plugin's skills whether or not the plugin is installed.
 
 Two things to avoid in a repo that pins a tag:
 
@@ -88,14 +124,15 @@ the repo adopts the plugin.
 
 ## Verified behaviour
 
-The Claude Code docs were ambiguous on four points, so each was tested, on Claude Code
-2.1.287. The details are in [Install](#install).
+The Claude Code docs were ambiguous or silent on these points, so each was tested, on Claude
+Code 2.1.287. The details are in [Install](#install).
 
 | Question | Answer |
 |---|---|
 | Does the skill resolve as `/iterate` or only as `/langop:iterate`? | Both. The bare name works unless something else in the session has it, such as a leftover `.claude/commands/iterate.md`. |
 | Is `enabledPlugins` an object or an array? | An object: `{"langop@language-operator": true}`. The full working file is under [In a consuming repo](#in-a-consuming-repo). |
 | Is a teammate who clones a repo with that file prompted to install? | No, and they don't need to be. Interactive sessions load the plugin once the folder is trusted. Non-interactive runs need the two commands above, once. |
+| Why does `claude plugin list` say `No plugins installed` while the skill works? | It lists only plugins installed explicitly with `claude plugin install`. An interactive session loads the plugin from the settings file without recording an install. See [Checking the install](#checking-the-install). |
 | Does `claude plugin validate` exist? | Yes. CI runs it with `--strict` on the marketplace and on each plugin. It needs no credentials. |
 
 ## Conventions
