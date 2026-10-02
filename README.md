@@ -13,18 +13,24 @@ from here instead of keeping its own copy.
 | `plugins/langop/skills/<name>/SKILL.md` | One directory per skill |
 | `plugins/langop/skills/<name>/scripts/*.sh` | Scripts a skill bundles |
 
-The `langop` plugin has no skills yet. The first one, `iterate`, arrives with
-[#2](https://github.com/language-operator/skills/issues/2).
+## Skills
+
+| Skill | What it does | Reads from the repo's `CLAUDE.md` |
+|---|---|---|
+| [`iterate`](plugins/langop/skills/iterate/SKILL.md) | Works one GitHub issue from pick to merged PR to closed. Takes `[#issue] [--auto]`. | `## Testing` |
 
 ## Install
 
 ### In a consuming repo
 
-Commit a `.claude/settings.json` that declares the marketplace, pinned to a tag, and enables
-the plugin:
+Commit a `.claude/settings.json` that enables the plugin and declares the marketplace, pinned
+to a tag:
 
 ```json
 {
+  "enabledPlugins": {
+    "langop@language-operator": true
+  },
   "extraKnownMarketplaces": {
     "language-operator": {
       "source": {
@@ -33,23 +39,64 @@ the plugin:
         "ref": "v0.1.0"
       }
     }
-  },
-  "enabledPlugins": {
-    "langop@language-operator": true
   }
 }
 ```
 
-`v0.1.0` is the first tag and ships with #2. To take a newer release, change `ref`.
+To take a newer release, change `ref`. The keys are in the order the `claude` CLI writes
+them, so a later `claude plugin install` doesn't reorder the committed file.
 
-### From the shell
+What a teammate does after cloning depends on how they run Claude Code:
+
+- **Interactive:** nothing. Claude Code adds the marketplace at the pinned `ref` and loads the
+  plugin when a session starts in a trusted folder. On a fresh clone that is right after the
+  "trust this folder" dialog; in a checkout that was already trusted it is the next start
+  after the settings file arrives. There is no install prompt.
+- **Non-interactive** (`claude -p`, scheduled or in-cluster agents): the settings file alone
+  installs nothing, because there is no trust dialog to accept. Run these once, with the same
+  tag the repo pins:
+  ```bash
+  claude plugin marketplace add 'language-operator/skills#v0.1.0'
+  claude plugin install langop@language-operator --scope project
+  ```
+
+Two things to avoid in a repo that pins a tag:
+
+- `claude plugin marketplace add language-operator/skills` without `#<tag>` follows `main`,
+  and the install then takes `main`'s version, not the pinned one.
+- `claude plugin marketplace add ... --scope project` rewrites the committed settings file
+  and drops its `ref`.
+
+### For yourself, in every repo
 
 ```bash
 claude plugin marketplace add language-operator/skills
 claude plugin install langop@language-operator
 ```
 
-Then run `/plugin` inside Claude Code to see the marketplace and the plugin.
+This follows `main`. Run `/plugin` inside Claude Code to see the marketplace and the plugin.
+
+### Invoking a skill
+
+A skill is registered as `/langop:<name>`, and the bare `/<name>` works too as long as
+nothing else in the session has that name. So `/iterate` and `/langop:iterate` both run the
+shared skill.
+
+A repo that still has its own `.claude/commands/iterate.md` shadows the bare name: `/iterate`
+runs the local copy and only `/langop:iterate` reaches the plugin. Delete the local copy when
+the repo adopts the plugin.
+
+## Verified behaviour
+
+The Claude Code docs were ambiguous on four points, so each was tested, on Claude Code
+2.1.287. The details are in [Install](#install).
+
+| Question | Answer |
+|---|---|
+| Does the skill resolve as `/iterate` or only as `/langop:iterate`? | Both. The bare name works unless something else in the session has it, such as a leftover `.claude/commands/iterate.md`. |
+| Is `enabledPlugins` an object or an array? | An object: `{"langop@language-operator": true}`. The full working file is under [In a consuming repo](#in-a-consuming-repo). |
+| Is a teammate who clones a repo with that file prompted to install? | No, and they don't need to be. Interactive sessions load the plugin once the folder is trusted. Non-interactive runs need the two commands above, once. |
+| Does `claude plugin validate` exist? | Yes. CI runs it with `--strict` on the marketplace and on each plugin. It needs no credentials. |
 
 ## Conventions
 
@@ -80,6 +127,16 @@ the plugin is installed outside the consuming repo:
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/skills/<name>/scripts/<script>.sh"
 ```
+
+Allow each script in the skill's `allowed-tools`, written with the same quotes as the call:
+
+```yaml
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/<name>/scripts/<script>.sh" *)
+```
+
+The quotes have to match. A rule without them does not cover the quoted call, the script is
+refused with "This command requires approval", and an unattended run has nobody to approve
+it.
 
 Scripts must pass `shellcheck`.
 
