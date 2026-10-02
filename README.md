@@ -128,6 +128,16 @@ the plugin is installed outside the consuming repo:
 bash "${CLAUDE_PLUGIN_ROOT}/skills/<name>/scripts/<script>.sh"
 ```
 
+Allow each script in the skill's `allowed-tools`, written with the same quotes as the call:
+
+```yaml
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/<name>/scripts/<script>.sh" *)
+```
+
+The quotes have to match. A rule without them does not cover the quoted call, the script is
+refused with "This command requires approval", and an unattended run has nobody to approve
+it.
+
 Scripts must pass `shellcheck`.
 
 ### Versioning

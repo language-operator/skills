@@ -2,7 +2,7 @@
 name: iterate
 description: Do the next logical piece of work — one issue, from pick to merged PR to closed
 argument-hint: "[#issue] [--auto]"
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/iterate/scripts/*), Bash(make:*), Bash(go:*), Bash(helm:*), Bash(docker:*), Bash(uv:*), Bash(pytest:*), Bash(npm:*), Bash(node:*), Bash(shellcheck:*), Read, Edit, Write, Glob, Grep
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/iterate/scripts/start-issue.sh" *), Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/iterate/scripts/push-branch.sh" *), Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/iterate/scripts/remove-worktree.sh" *), Bash(make:*), Bash(go:*), Bash(helm:*), Bash(docker:*), Bash(uv:*), Bash(pytest:*), Bash(npm:*), Bash(node:*), Bash(shellcheck:*), Read, Edit, Write, Glob, Grep
 ---
 <!-- Canonical /iterate (language-operator#932), shared by every repo through the langop
      plugin. Nothing here is per-repo: how to test a change comes from the `## Testing`
