@@ -1,0 +1,14 @@
+{
+  "name": "language-operator",
+  "description": "Shared Claude Code skills for the language-operator org's repos.",
+  "owner": {
+    "name": "language-operator"
+  },
+  "plugins": [
+    {
+      "name": "langop",
+      "source": "./plugins/langop",
+      "description": "Shared workflow skills for language-operator repos."
+    }
+  ]
+}
